@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7fb">
+  <title>System Activity Anomaly Demo</title>
+  <style>
+    :root { color-scheme: light; --ink:#172033; --muted:#647187; --blue:#315fce; --line:#dce3ee; --surface:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#f4f7fb; color:var(--ink); font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    main { width:min(720px, calc(100% - 32px)); margin:52px auto; }
+    .eyebrow { color:var(--blue); font-size:.8rem; font-weight:750; letter-spacing:.12em; text-transform:uppercase; }
+    h1 { margin:.4rem 0 .5rem; font-size:clamp(2rem,5vw,3.1rem); line-height:1.12; letter-spacing:-.04em; }
+    .intro { margin:0 0 26px; color:var(--muted); max-width:62ch; }
+    .card { padding:26px; border:1px solid var(--line); border-radius:18px; background:var(--surface); box-shadow:0 12px 36px #20385c0d; }
+    .field { margin:0 0 22px; }
+    label { display:flex; justify-content:space-between; gap:12px; margin-bottom:8px; font-weight:650; }
+    output { color:var(--blue); font-variant-numeric:tabular-nums; }
+    input[type=range] { width:100%; accent-color:var(--blue); }
+    .bounds { display:flex; justify-content:space-between; color:var(--muted); font-size:.8rem; }
+    button { width:100%; margin-top:2px; border:0; border-radius:10px; padding:13px 18px; background:var(--blue); color:white; font:inherit; font-weight:700; cursor:pointer; }
+    button:hover { background:#234cad; }
+    button:disabled { cursor:wait; opacity:.7; }
+    #result { display:none; margin-top:18px; padding:18px; border-radius:12px; border:1px solid var(--line); background:#f8faff; }
+    #result.visible { display:block; }
+    #result h2 { margin:0 0 4px; font-size:1.15rem; }
+    #result p { margin:5px 0; color:var(--muted); }
+    .notice { margin-top:18px; padding:13px 15px; border-left:3px solid #d6a33a; border-radius:6px; background:#fff9e9; color:#5f512e; font-size:.9rem; }
+    footer { margin:18px 4px; color:var(--muted); font-size:.85rem; }
+    a { color:var(--blue); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Python · Isolation Forest</div>
+    <h1>System Activity Anomaly Demo</h1>
+    <p class="intro">Enter CPU and memory usage to see how an Isolation Forest labels a reading compared with a generated reference pattern.</p>
+
+    <section class="card" aria-label="Resource usage inputs">
+      <form id="check-form">
+        <div class="field">
+          <label for="cpu">CPU usage <output id="cpu-value" for="cpu">25%</output></label>
+          <input id="cpu" name="cpu" type="range" min="0" max="100" value="25">
+          <div class="bounds"><span>0%</span><span>100%</span></div>
+        </div>
+        <div class="field">
+          <label for="memory">Memory usage <output id="memory-value" for="memory">50%</output></label>
+          <input id="memory" name="memory" type="range" min="0" max="100" value="50">
+          <div class="bounds"><span>0%</span><span>100%</span></div>
+        </div>
+        <button id="submit" type="submit">Check this reading</button>
+      </form>
+      <div id="result" role="status" aria-live="polite">
+        <h2 id="result-title"></h2>
+        <p id="result-detail"></p>
+        <p id="result-score"></p>
+      </div>
+      <div class="notice"><strong>Demo limitation:</strong> the reference pattern is simulated. This page does not read or monitor your computer, and an unusual reading is not proof of malware or an intrusion.</div>
+    </section>
+    <footer>Student project prototype · <a href="https://github.com/Priyanshu-ed186/system-activity-anomaly-detector">View source on GitHub</a></footer>
+  </main>
+  <script>
+    const cpu = document.querySelector('#cpu');
+    const memory = document.querySelector('#memory');
+    cpu.addEventListener('input', () => document.querySelector('#cpu-value').value = `${cpu.value}%`);
+    memory.addEventListener('input', () => document.querySelector('#memory-value').value = `${memory.value}%`);
+
+    document.querySelector('#check-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = document.querySelector('#submit');
+      const panel = document.querySelector('#result');
+      button.disabled = true;
+      button.textContent = 'Checking…';
+      panel.classList.remove('visible');
+      try {
+        const response = await fetch('/api/detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cpu_percent: Number(cpu.value), memory_percent: Number(memory.value) })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'The check could not be completed.');
+        document.querySelector('#result-title').textContent = data.is_outlier ? 'Flagged as an unusual reading' : 'Within the model’s reference pattern';
+        document.querySelector('#result-detail').textContent = `CPU ${data.cpu_percent}% · Memory ${data.memory_percent}%`;
+        document.querySelector('#result-score').textContent = `Model score: ${data.score.toFixed(3)} (lower scores are more unusual).`;
+        panel.classList.add('visible');
+      } catch (error) {
+        document.querySelector('#result-title').textContent = 'Could not check this reading';
+        document.querySelector('#result-detail').textContent = error.message;
+        document.querySelector('#result-score').textContent = '';
+        panel.classList.add('visible');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Check this reading';
+      }
+    });
+  </script>
+</body>
+</html>

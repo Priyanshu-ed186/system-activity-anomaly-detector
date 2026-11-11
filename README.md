@@ -2,6 +2,12 @@
 
 A small Python project that demonstrates anomaly detection in computer resource activity. The demo trains an Isolation Forest on simulated normal CPU and memory readings, then checks whether injected unusual readings are flagged. The simulator is clearly labeled; its results are not measurements of real computer attacks.
 
+## Vercel web demo
+
+The web page lets a visitor enter CPU and memory values and calls a Python Vercel Function. It uses a generated reference pattern to demonstrate the model; it does not monitor the visitor's computer.
+
+To deploy, import this GitHub repository as a new project in Vercel and use the default settings. Vercel serves `index.html` and the Python function at `api/detect.py`.
+
 ## Setup in Windows PowerShell
 
 ```powershell
