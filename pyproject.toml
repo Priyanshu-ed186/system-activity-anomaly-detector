@@ -1,5 +1,4 @@
-[tool.vercel]
-entrypoint = "api.detect:handler"
+
 [project]
 name = "system-activity-anomaly-detector"
 version = "0.1.0"
